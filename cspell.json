@@ -1,0 +1,20 @@
+{
+  "words": [
+    "sftpfs",
+    "deinit",
+    "libssh",
+    "errdefer",
+    "usize",
+    "memcpy",
+    "userauth",
+    "addrs",
+    "duckdb",
+    "filesize",
+    "anyerror",
+    "fstat",
+    "ulonglong",
+    "comptime",
+    "publickey",
+    "frommemory"
+  ]
+}

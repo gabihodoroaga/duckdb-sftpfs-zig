@@ -1,0 +1,4 @@
+-I/usr/local/Cellar/libssh2/1.11.1/include
+-I/Users/gabrielhodoroaga/Projects/zig-duckdb-ext/src
+-I/Users/gabrielhodoroaga/Projects/zig-duckdb-ext/duckdb/src/include
+-std=c++11
