@@ -132,7 +132,6 @@ const FileCache = struct {
             if (v.lru_node) |n| {
                 self.lru_list.promote(n);
             }
-            self.stats();
             return v;
         }
         return null;
@@ -173,7 +172,6 @@ const FileCache = struct {
             v.lru_node = node;
 
             self.total_size += size;
-            self.stats();
             return v;
         } else unreachable;
     }
@@ -184,10 +182,6 @@ const FileCache = struct {
             self.allocator.free(v.key);
             self.cache.remove(key);
         }
-    }
-
-    pub fn stats(self: *Self) void {
-        std.log.debug("cache stats: items: {}, size: {}, max: {}", .{ self.lru_list.size, self.total_size, self.max_size });
     }
 };
 
