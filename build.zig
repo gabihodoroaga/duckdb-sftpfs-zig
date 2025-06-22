@@ -28,7 +28,7 @@ pub fn build(b: *std.Build) void {
     lib.linkSystemLibrary("duckdb");
     lib.addLibraryPath(b.path("duckdb/build/release/src"));
 
-    // create the extenstion metadata
+    // create the extension metadata
     b.getInstallStep().dependOn(&duckdb.appendMetadata(
         b,
         b.addInstallArtifact(

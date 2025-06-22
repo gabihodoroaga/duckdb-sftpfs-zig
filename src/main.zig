@@ -1,6 +1,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const Stream = std.net.Stream;
+const lists = @import("lists.zig");
 
 const c = @cImport({
     @cInclude("libssh2.h");
@@ -96,17 +97,23 @@ fn GetSftpHandle(allocator: Allocator) !*SftpFileHandle {
     return result;
 }
 
+const CacheNode = lists.LinkedList(*FileCacheEntry).Node;
+
 const FileCacheEntry = struct {
     key: []const u8,
     size: u64,
     fill_offset: u64,
     mtime: u32,
     data: ?[]u8,
+    lru_node: ?*CacheNode,
 };
 
 const FileCache = struct {
     allocator: Allocator,
     cache: std.StringHashMap(FileCacheEntry),
+    total_size: u64,
+    max_size: u64,
+    lru_list: lists.LinkedList(*FileCacheEntry),
 
     const Self = @This();
 
@@ -114,11 +121,21 @@ const FileCache = struct {
         return FileCache{
             .allocator = allocator,
             .cache = std.StringHashMap(FileCacheEntry).init(allocator),
+            .total_size = 0,
+            .max_size = 1024 * 1024 * 1024, // 1GB
+            .lru_list = lists.LinkedList(*FileCacheEntry).init(),
         };
     }
 
     pub fn get(self: *Self, key: []const u8) ?*FileCacheEntry {
-        return self.cache.getPtr(key);
+        if (self.cache.getPtr(key)) |v| {
+            if (v.lru_node) |n| {
+                self.lru_list.promote(n);
+            }
+            self.stats();
+            return v;
+        }
+        return null;
     }
 
     pub fn put(self: *Self, key: []const u8, size: u64, mtime: u32) !*FileCacheEntry {
@@ -126,8 +143,39 @@ const FileCache = struct {
         errdefer self.allocator.free(fc_key);
         const data = try self.allocator.alloc(u8, size);
         errdefer self.allocator.free(data);
-        try self.cache.put(fc_key, FileCacheEntry{ .key = fc_key, .size = size, .fill_offset = 0, .mtime = mtime, .data = data });
-        if (self.cache.getPtr(key)) |v| return v else unreachable;
+
+        try self.cache.put(fc_key, FileCacheEntry{ .key = fc_key, .size = size, .fill_offset = 0, .mtime = mtime, .data = data, .lru_node = null });
+        if (self.cache.getPtr(key)) |v| {
+
+            // first, check if the file can fit into the cache max size and release if necessary
+            while (self.total_size + size > self.max_size) {
+                const lru_node = self.lru_list.del();
+                if (lru_node) |n| {
+                    self.total_size -= n.value.size;
+
+                    const lru_key = n.value.key;
+                    const lru_data = n.value.data;
+
+                    _ = self.cache.remove(lru_key);
+                    if (lru_data) |d| {
+                        self.allocator.free(d);
+                    }
+                    self.allocator.free(lru_key);
+                    self.allocator.destroy(n);
+                } else {
+                    unreachable;
+                }
+            }
+
+            const node = try self.allocator.create(CacheNode);
+            node.* = .{ .value = v };
+            self.lru_list.add(node);
+            v.lru_node = node;
+
+            self.total_size += size;
+            self.stats();
+            return v;
+        } else unreachable;
     }
 
     pub fn remove(self: *Self, key: []const u8) void {
@@ -136,6 +184,10 @@ const FileCache = struct {
             self.allocator.free(v.key);
             self.cache.remove(key);
         }
+    }
+
+    pub fn stats(self: *Self) void {
+        std.log.debug("cache stats: items: {}, size: {}, max: {}", .{ self.lru_list.size, self.total_size, self.max_size });
     }
 };
 
@@ -262,7 +314,7 @@ export fn file_handle_create(path: [*:0]const u8, settings: *anyopaque, err_msg:
             return 0;
         }
     } else {
-        std.log.debug("[{}] session auth (identity file)", .{sfh});
+        std.log.debug("[{}] session auth (username/password)", .{sfh});
         libssh_err_code = c.libssh2_userauth_password_ex(sftp_handle.session, sftp_handle.params.?.user.ptr, //
             @intCast(sftp_handle.params.?.user.len), sftp_handle.params.?.pass.ptr, @intCast(sftp_handle.params.?.pass.len), null);
 

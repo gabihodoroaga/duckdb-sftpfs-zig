@@ -42,7 +42,7 @@ pub const AppendMetadata = struct {
     options: Options,
 
     pub const Options = struct {
-        duckDbVersion: []const u8 = "v1.3.0",
+        duckDbVersion: []const u8 = "v1.3.1",
         platform: []const u8,
         extVersion: ?[]const u8 = null,
     };

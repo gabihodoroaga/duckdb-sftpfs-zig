@@ -33,12 +33,12 @@ SELECT * FROM read_csv_auto('sftp://localhost:2222/config/data/data_1.csv');
 
 ## Building
 
-Use version 1.3.0 of duckdb
+Use version 1.3.1 of duckdb
 
 ```bash
 cd duckdb
 git fetch --all
-git switch v1.3.0
+git switch --detach v1.3.1
 ```
 
 Build duckdb
@@ -47,6 +47,8 @@ Build duckdb
 cd duckdb
 make
 ```
+
+Build the extension
 
 ```
 zig build
@@ -76,8 +78,11 @@ SELECT * FROM read_csv_auto('sftp://testuser:testpass@localhost:2222/config/data
 
 ## TODO:
 
-- [ ] implement connection/session management
-- [ ] improve caching (max size with lru, disable variable, reset)
+- [x] improve caching (max size with lru)
+- [ ] implement disable cache using config
+- [ ] implement cache reset
+- [ ] implement configurable cache size
 - [ ] implement local file caching
+- [ ] implement connection/session management
 - [ ] implement list remote files function
 - [ ] implement globs
