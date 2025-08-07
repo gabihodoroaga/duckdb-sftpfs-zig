@@ -1,8 +1,8 @@
 # sftpfs
 
-Access remote files directly into duckdb instance using sftp.
+Access remote files directly using sftp.
 
-Note: This is an experiment to see how hard will be to create a duckdb extension in zig. This is not production ready ... yet. Check then todo section.
+Note: This is an experiment to see how hard will be to create a duckdb extension in zig. This is not production ready ... yet. Check the TODO section.
 
 ## Features
 
